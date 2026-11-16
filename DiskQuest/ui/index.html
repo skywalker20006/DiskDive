@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DiskQuest</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <header id="top">
+    <div class="brand" id="brand" title="Back to start">
+      <span class="logo"><i></i><i></i><i></i><i></i></span>DiskQuest
+    </div>
+    <nav id="crumbs" aria-label="Current folder"></nav>
+    <button id="btnNew" class="btn ghost hidden">New scan</button>
+    <div id="player" title="Your progress"></div>
+  </header>
+
+  <!-- Start screen -->
+  <section id="home" class="screen">
+    <div class="home-inner">
+      <h1>What's eating your disk?</h1>
+      <p class="lede">Pick a drive or folder. DiskQuest maps it so the biggest space hogs are impossible to miss,
+        then rewards you for clearing them out.</p>
+      <h2>Drives</h2>
+      <div id="drives" class="drives"></div>
+      <h2>Quick places</h2>
+      <div id="places" class="places"></div>
+      <p class="fine">Nothing leaves your PC. Clean-ups go to the Recycle Bin, so you can always restore them.</p>
+    </div>
+  </section>
+
+  <!-- Scanning screen -->
+  <section id="scanning" class="screen hidden">
+    <div class="scan-inner">
+      <div class="scan-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h1>Mapping <span id="scanRoot"></span></h1>
+      <div class="scan-stats">
+        <div><b id="scBytes">0 B</b><span>found so far</span></div>
+        <div><b id="scFiles">0</b><span>files</span></div>
+        <div><b id="scDirs">0</b><span>folders</span></div>
+        <div><b id="scTime">0.0 s</b><span>elapsed</span></div>
+      </div>
+      <div class="scan-bar hidden" id="scanBar"><i></i></div>
+      <div id="scanPath" class="scan-path"></div>
+      <div id="scanTip" class="scan-tip"></div>
+      <button id="btnCancel" class="btn ghost">Cancel</button>
+    </div>
+  </section>
+
+  <!-- Explore screen -->
+  <section id="explore" class="screen hidden">
+    <div class="map-col">
+      <div id="mapWrap">
+        <canvas id="map"></canvas>
+        <div id="tip" class="tip hidden"></div>
+        <div id="bagBar" class="bagbar hidden"></div>
+      </div>
+      <div class="map-foot">
+        <div id="legend" class="legend"></div>
+        <div class="keys">Click a folder to dive in · Right-click to go back · Shift-click to select a folder</div>
+      </div>
+    </div>
+    <aside id="side">
+      <div id="detail" class="detail"></div>
+      <div class="tabs" role="tablist">
+        <button data-tab="hogs" class="on">Space hogs</button>
+        <button data-tab="quests">Quests<span id="questBadge" class="badge hidden"></span></button>
+        <button data-tab="types">Types</button>
+        <button data-tab="trophies">Trophies</button>
+      </div>
+      <div id="panel" class="panel"></div>
+    </aside>
+  </section>
+</div>
+
+<div id="modal" class="modal hidden"></div>
+<div id="toasts" class="toasts"></div>
+<canvas id="fx"></canvas>
+<script src="app.js"></script>
+</body>
+</html>

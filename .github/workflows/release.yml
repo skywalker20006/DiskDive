@@ -1,0 +1,30 @@
+name: Release
+
+# Push a tag like v1.0.0 to build DiskQuest.exe and attach it to a GitHub release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Build single-file exe
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create $env:TAG dist/DiskQuest.exe --title "DiskQuest $env:TAG" --generate-notes

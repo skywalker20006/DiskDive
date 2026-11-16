@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO.Enumeration;
 
-namespace DiskQuest;
+namespace DiskDive;
 
 /// <summary>One file or folder in the scanned tree. Kept small: a full drive can be 1M+ nodes.</summary>
 sealed class Node

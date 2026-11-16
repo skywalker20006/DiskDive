@@ -1,4 +1,4 @@
-# Regenerates DiskQuest/app.ico (a tiny treemap). Run:  powershell -File tools/make-icon.ps1
+# Regenerates DiskDive/app.ico (a tiny treemap). Run:  powershell -File tools/make-icon.ps1
 Add-Type -AssemblyName System.Drawing
 
 function New-Frame([int]$size) {
@@ -48,6 +48,6 @@ for ($i = 0; $i -lt $sizes.Count; $i++) {
     $offset += $frames[$i].Length
 }
 foreach ($f in $frames) { $w.Write($f) }
-$target = Join-Path $PSScriptRoot '..\DiskQuest\app.ico'
+$target = Join-Path $PSScriptRoot '..\DiskDive\app.ico'
 [System.IO.File]::WriteAllBytes($target, $out.ToArray())
 Write-Host "Wrote $target ($($out.Length) bytes)"

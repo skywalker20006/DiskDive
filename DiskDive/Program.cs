@@ -1,7 +1,7 @@
 using System.Net;
 using System.Reflection;
 
-namespace DiskQuest;
+namespace DiskDive;
 
 static class Program
 {

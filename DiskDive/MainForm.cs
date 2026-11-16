@@ -4,12 +4,12 @@ using System.Runtime.InteropServices;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
-namespace DiskQuest;
+namespace DiskDive;
 
 /// <summary>The app window: a WebView2 surface showing the embedded UI, wired to <see cref="Api"/>.</summary>
 sealed class MainForm : Form
 {
-    const string Origin = "https://diskquest.example/";
+    const string Origin = "https://diskdive.example/";
 
     readonly WebView2 _web = new() { Dock = DockStyle.Fill };
     readonly Api _api;
@@ -18,7 +18,7 @@ sealed class MainForm : Form
     public MainForm(int devPort, string? uiDir)
     {
         _uiDir = uiDir;
-        Text = "DiskQuest";
+        Text = "DiskDive";
         ClientSize = new Size(1320, 840);
         MinimumSize = new Size(980, 640);
         StartPosition = FormStartPosition.CenterScreen;
@@ -53,9 +53,9 @@ sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this,
-                "DiskQuest needs the Microsoft Edge WebView2 Runtime, which is missing or broken on this PC.\n\n" +
+                "DiskDive needs the Microsoft Edge WebView2 Runtime, which is missing or broken on this PC.\n\n" +
                 "Install it from:\nhttps://go.microsoft.com/fwlink/p/?LinkId=2124703\n\nDetails: " + ex.Message,
-                "DiskQuest", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                "DiskDive", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Close();
             return;
         }

@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.VisualBasic.FileIO;
 
-namespace DiskQuest;
+namespace DiskDive;
 
 /// <summary>
 /// Everything the UI can ask for. One JSON request in ({id, cmd, args}), one JSON response out,
@@ -656,13 +656,13 @@ static class Guard
     }
 }
 
-/// <summary>The player's lifetime stats, saved as a small JSON file in %LocalAppData%\DiskQuest.</summary>
+/// <summary>The player's lifetime stats, saved as a small JSON file in %LocalAppData%\DiskDive.</summary>
 sealed class Profile
 {
     public static readonly string DataDir =
-        Environment.GetEnvironmentVariable("DISKQUEST_DATA") is { Length: > 0 } custom
+        Environment.GetEnvironmentVariable("DISKDIVE_DATA") is { Length: > 0 } custom
             ? custom
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiskQuest");
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DiskDive");
 
     readonly string _file = Path.Combine(DataDir, "profile.json");
     readonly Dictionary<string, double> _values = new();

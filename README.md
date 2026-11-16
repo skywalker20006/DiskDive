@@ -59,15 +59,6 @@ dotnet run --project DiskDive
 
 For UI work, `DiskDive.exe --dev 5199 --ui-dir DiskDive\ui` also serves the interface at `http://127.0.0.1:5199`, so you can open it in a browser with dev tools and edit the UI files without rebuilding.
 
-## Publishing a release
-
-Push a version tag and GitHub Actions builds the exe and attaches it to a new release:
-
-```powershell
-git tag v1.0.0
-git push origin v1.0.0
-```
-
 ## Licence
 
 MIT. See [LICENSE](LICENSE).

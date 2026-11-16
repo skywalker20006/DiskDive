@@ -61,10 +61,10 @@ h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: v
   width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none;
   font-weight: 700; font-size: 14px; background: var(--raised-2); border: 2px solid var(--accent);
 }
-.pl-main { width: 170px; }
+.pl-main { width: 215px; }
 .pl-title { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
-.pl-title b { font-weight: 600; }
-.pl-title span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pl-title b { font-weight: 600; white-space: nowrap; }
+.pl-title span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .xp { height: 5px; border-radius: 3px; background: var(--raised-2); margin-top: 5px; overflow: hidden; }
 .xp i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
 .pl-freed { text-align: right; font-size: 11px; color: var(--muted); line-height: 1.25; }

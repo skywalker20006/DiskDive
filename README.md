@@ -4,7 +4,7 @@
 
 DiskDive is a free Windows app that scans a drive or folder and draws it as an interactive map: every file is a block, the bigger the block the more space it takes, and the colour tells you what kind of file it is. Click a folder to dive in, bag the things you don't want, and send them to the Recycle Bin for XP.
 
-<!-- Add a screenshot here once you have one:  ![DiskDive](docs/screenshot.png) -->
+![The DiskDive map: every file is a block, sized by the space it takes and coloured by type](docs/map.png)
 
 ## Download
 
@@ -23,6 +23,18 @@ Grab `DiskDive.exe` from the [latest release](../../releases/latest) and run it.
 - **The bag.** Collect things you want gone, review the list, then recycle them in one go.
 - **Levels and trophies.** Every megabyte you reclaim earns XP. Twelve trophies to unlock, from *First Expedition* to *Hundred-Gig Hero*.
 - **Fast.** The scanner runs in parallel; a drive with 1.3 million files maps in well under a minute on an SSD.
+
+## Screenshots
+
+Bag what you don't want, guided by quests that point out the easy wins:
+
+![A folder with two installers bagged for recycling, next to the quests list](docs/quests.png)
+
+Earn XP and trophies as you reclaim space, and spotlight one file type on the map:
+
+![The trophies tab, with video files highlighted on the map](docs/trophies.png)
+
+The screenshots show a demo drive with made-up files.
 
 ## Safety
 

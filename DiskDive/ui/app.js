@@ -284,6 +284,7 @@ function resize() {
 new ResizeObserver(resize).observe(wrap);
 
 function layoutAll() {
+  baseDirty = true;
   byId = new Map();
   if (view && W && H) layout(view.tree, 0, 0, W, H, 0, null);
 }
@@ -340,40 +341,48 @@ function rr(c, x, y, w, h, r) {
   c.roundRect(x, y, w, h, r);
 }
 
-function clip(c, text, maxW) {
-  if (c.measureText(text).width <= maxW) return text;
-  let n = Math.max(1, Math.floor(maxW / 6.2));
-  while (n > 1 && c.measureText(text.slice(0, n) + '…').width > maxW) n--;
-  return n > 1 ? text.slice(0, n) + '…' : '';
+/** Shortens a label to fit. Widths are cached on the node so animation frames rarely measure text. */
+function clip(c, n, text, maxW) {
+  if (n._text !== text) { n._text = text; n._tw = c.measureText(text).width; n._cw = -1; }
+  if (n._tw <= maxW) return text;
+  const key = Math.round(maxW);
+  if (n._cw === key) return n._cut;
+  let k = Math.floor((text.length * maxW) / n._tw) - 1;
+  while (k > 1 && c.measureText(text.slice(0, k) + '…').width > maxW) k--;
+  n._cw = key;
+  return (n._cut = k > 1 ? text.slice(0, k) + '…' : '');
 }
 
 /** Paints the whole map (no hover/selection overlays) onto any 2D context. */
-function render(c) {
+function render(c, tree) {
   c.clearRect(0, 0, W, H);
   c.textBaseline = 'middle';
-  if (view) paint(c, view.tree);
+  if (tree || view) paint(c, tree || view.tree);
   c.globalAlpha = 1;
 }
 
 function paint(c, n) {
   if (n.w < 0.6 || n.h < 0.6) return;
+  if (n.x >= W || n.y >= H || n.x + n.w <= 0 || n.y + n.h <= 0) return;   // off screen (mid-zoom)
   if (n.open) {
-    if (n.depth > 0) {
+    if (n.depth > 0 && n.w > 2 && n.h > 2) {
       c.globalAlpha = 1;
       c.fillStyle = SHADES[Math.min(n.depth - 1, SHADES.length - 1)];
       rr(c, n.x + 1, n.y + 1, n.w - 2, n.h - 2, 5);
       c.fill();
-      c.font = '600 11px system-ui, "Segoe UI", sans-serif';
-      const size = fmt(n.size), sw = c.measureText(size).width;
-      const room = n.w - 14;
-      c.fillStyle = '#c3c2b7';
-      const name = clip(c, n.name, room - (room > sw + 60 ? sw + 10 : 0));
-      if (name) c.fillText(name, n.x + 7, n.y + HEAD / 2 + 1.5);
-      if (room > sw + 60) {
-        c.fillStyle = '#898781';
-        c.textAlign = 'right';
-        c.fillText(size, n.x + n.w - 7, n.y + HEAD / 2 + 1.5);
-        c.textAlign = 'left';
+      if (n.w > 44 && n.h > HEAD + 4) {
+        c.font = '600 11px system-ui, "Segoe UI", sans-serif';
+        if (n._sw === undefined) { n._size = fmt(n.size); n._sw = c.measureText(n._size).width; }
+        const room = n.w - 14, withSize = room > n._sw + 60;
+        c.fillStyle = '#c3c2b7';
+        const name = clip(c, n, n.name, room - (withSize ? n._sw + 10 : 0));
+        if (name) c.fillText(name, n.x + 7, n.y + HEAD / 2 + 1.5);
+        if (withSize) {
+          c.fillStyle = '#898781';
+          c.textAlign = 'right';
+          c.fillText(n._size, n.x + n.w - 7, n.y + HEAD / 2 + 1.5);
+          c.textAlign = 'left';
+        }
       }
     }
     for (const k of n.items) paint(c, k);
@@ -385,21 +394,22 @@ function paint(c, n) {
   const x = n.x + g, y = n.y + g, w = n.w - g * 2, h = n.h - g * 2;
   if (w <= 0 || h <= 0) return;
   const dim = filterCat >= 0 && (n.rest || n.cat !== filterCat);
-  c.globalAlpha = dim ? 0.13 : n.rest ? 0.5 : n.dir ? 0.72 : 1;
+  c.globalAlpha = (dim ? 0.13 : n.rest ? 0.5 : n.dir ? 0.72 : 1);
   c.fillStyle = n.rest ? '#3d3d3a' : CATS[n.cat].color;
   rr(c, x, y, w, h, 4);
   c.fill();
   if (w >= 54 && h >= 20) {
-    c.globalAlpha = dim ? 0.3 : 1;
+    c.globalAlpha = (dim ? 0.3 : 1);
     c.fillStyle = '#ffffff';
     c.font = '600 12px system-ui, "Segoe UI", sans-serif';
     const two = h >= 38;
-    const label = clip(c, (n.dir ? '▸ ' : '') + n.name, w - 12);
+    if (n._label === undefined) { n._label = (n.dir ? '▸ ' : '') + n.name; n._size = fmt(n.size); }
+    const label = clip(c, n, n._label, w - 12);
     if (label) c.fillText(label, x + 6, y + (two ? 13 : h / 2 + 0.5));
     if (two && label) {
-      c.globalAlpha = dim ? 0.25 : 0.82;
+      c.globalAlpha = (dim ? 0.25 : 0.82);
       c.font = '11px system-ui, "Segoe UI", sans-serif';
-      c.fillText(fmt(n.size), x + 6, y + 28);
+      c.fillText(n._size, x + 6, y + 28);
     }
   }
 }
@@ -426,9 +436,23 @@ function outline(n, color, width) {
   ctx.stroke();
 }
 
+// The map itself is painted once into `base`; hover, selection and bag overlays are drawn over a copy
+// of it, so moving the mouse never repaints thousands of blocks.
+const base = document.createElement('canvas');
+let baseDirty = true;
+
 function draw() {
+  if (baseDirty || base.width !== map.width || base.height !== map.height) {
+    base.width = map.width; base.height = map.height;
+    const bc = base.getContext('2d');
+    bc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    render(bc);
+    baseDirty = false;
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, map.width, map.height);
+  ctx.drawImage(base, 0, 0);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  render(ctx);
   // Items waiting in the bag are struck through with a hatch.
   for (const id of bag.keys()) {
     const n = byId.get(id);
@@ -476,6 +500,8 @@ function visibleId(chain) {
 
 /* ---------- navigation with zoom animation ---------- */
 
+let ZOOM_MS = 420;
+
 async function go(id, how) {
   if (busy) return;
   busy = true;
@@ -484,24 +510,27 @@ async function go(id, how) {
     try { next = await call('view', { id, depth: 8 }); }
     catch (err) { fail(err); return; }
     const old = view;
-    const snap = old && W && how !== 'jump' && !reduceMotion ? snapshot() : null;
-    let from = null, to = null;
-    if (snap && how === 'in') from = rectOf(byId.get(next.tree.id));
+    const animate = !!old && W > 0 && how !== 'jump' && !reduceMotion;
+    const snap = animate ? snapshot() : null;
+    const from = animate && how === 'in' ? contentRect(byId.get(next.tree.id)) : null;
+
     view = next; hover = null; pulse = -1; sel = null;
     hideTip();
     layoutAll();
-    if (snap && how === 'out') to = rectOf(byId.get(old.tree.id));
     renderCrumbs();
-    selectCurrent();
-    refreshLists();
-    if (snap && (from || to)) await zoom(snap, from, to);
+    const lists = fetchLists(view.tree.id);   // ask now, show after the animation so it never stutters
+    const to = animate && how === 'out' ? contentRect(byId.get(old.tree.id)) : null;
+
+    if (from) await zoom(old.tree, from, true, null);
+    else if (to) await zoom(view.tree, to, false, snap);
     draw();
+
+    selectCurrent();
+    lists.then(showLists);
     const depth = view.crumbs.length - 1;
     if (profile && depth > profile.maxDepth) call('bump', { key: 'maxDepth', value: depth, mode: 'max' }).then(p => setProfile(p, true));
   } finally { busy = false; }
 }
-
-const rectOf = n => (n && n.w > 6 && n.h > 6 ? { x: n.x, y: n.y, w: n.w, h: n.h } : null);
 
 function snapshot() {
   const c = document.createElement('canvas');
@@ -510,35 +539,84 @@ function snapshot() {
   return c;
 }
 
-function zoom(snap, from, to) {
+/** The part of a folder's block that holds its contents (inside the title strip and border). */
+function contentRect(n) {
+  if (!n || n.w < 8 || n.h < 8) return null;
+  const r = n.open && n.depth > 0
+    ? { x: n.x + PAD, y: n.y + HEAD, w: n.w - PAD * 2, h: n.h - HEAD - PAD }
+    : { x: n.x, y: n.y, w: n.w, h: n.h };
+  return r.w > 4 && r.h > 4 ? r : null;
+}
+
+/**
+ * Camera-style zoom. The map is redrawn every frame with its blocks moved and resized, so everything
+ * stays sharp and labels never stretch.
+ *   Diving in:    the old map zooms until the chosen folder fills the view, then the more detailed
+ *                 picture of that folder fades in over it.
+ *   Climbing out: the new map starts zoomed in on the folder we came from and pulls back, while the
+ *                 old picture shrinks into that folder's block and fades.
+ */
+function zoom(tree, rect, diving, snap) {
   return new Promise(done => {
-    const fresh = document.createElement('canvas');
-    fresh.width = map.width; fresh.height = map.height;
-    const fc = fresh.getContext('2d');
-    fc.setTransform(dpr, 0, 0, dpr, 0, 0);
-    render(fc);
-    const full = { x: 0, y: 0, w: W, h: H }, t0 = performance.now(), dur = 320;
+    const nodes = [];
+    (function walk(n) {
+      n.b = { x: n.x, y: n.y, w: n.w, h: n.h };
+      nodes.push(n);
+      if (n.open) for (const k of n.items) walk(k);
+    })(tree);
+
+    let fresh = null;           // finished picture of the new view, faded in at the end of a dive
+    if (diving) {
+      fresh = document.createElement('canvas');
+      fresh.width = map.width; fresh.height = map.height;
+      const fc = fresh.getContext('2d');
+      fc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      render(fc);
+      fc.globalCompositeOperation = 'destination-over';
+      fc.fillStyle = '#1a1a19';
+      fc.fillRect(0, 0, W, H);
+    }
+
+    const full = { x: 0, y: 0, w: W, h: H };
+    const a = diving ? rect : full, b = diving ? full : rect;
+    const smooth = v => { v = Math.min(1, Math.max(0, v)); return v * v * (3 - 2 * v); };
+    const t0 = performance.now();
     let finished = false;
-    const finish = () => { if (!finished) { finished = true; done(); } };
-    setTimeout(finish, dur + 250);   // never get stuck if the window is hidden
-    const lerp = (a, b, e) => ({ x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e, w: a.w + (b.w - a.w) * e, h: a.h + (b.h - a.h) * e });
-    const whole = (img, r, alpha) => { ctx.globalAlpha = alpha; ctx.drawImage(img, r.x, r.y, r.w, r.h); };
-    const mapped = (img, src, dst, alpha) => {
-      const sx = dst.w / src.w, sy = dst.h / src.h;
-      ctx.globalAlpha = alpha;
-      ctx.drawImage(img, dst.x - src.x * sx, dst.y - src.y * sy, W * sx, H * sy);
-    };
-    (function frame(now) {
+
+    const finish = () => {
       if (finished) return;
-      const t = Math.min(1, ((now || t0) - t0) / dur);
-      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      finished = true;
+      for (const n of nodes) { n.x = n.b.x; n.y = n.b.y; n.w = n.b.w; n.h = n.b.h; }
+      baseDirty = true;
+      done();
+    };
+    setTimeout(finish, ZOOM_MS + 300);   // never get stuck if the window is hidden
+
+    const frame = now => {
+      if (finished) return;
+      const t = Math.min(1, Math.max(0, (now - t0) / ZOOM_MS));
+      const z = 1 - Math.pow(1 - t, 3);
+      // Where `rect` sits on screen right now.
+      const cx = a.x + (b.x - a.x) * z, cy = a.y + (b.y - a.y) * z;
+      const cw = a.w + (b.w - a.w) * z, ch = a.h + (b.h - a.h) * z;
+      const sx = cw / rect.w, sy = ch / rect.h;
+      for (const n of nodes) {
+        n.x = cx + (n.b.x - rect.x) * sx; n.y = cy + (n.b.y - rect.y) * sy;
+        n.w = n.b.w * sx; n.h = n.b.h * sy;
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, W, H);
-      if (from) { const r = lerp(from, full, e); mapped(snap, from, r, 1 - e * e); whole(fresh, r, Math.min(1, e * 1.4)); }
-      else { const r = lerp(full, to, e); mapped(fresh, to, r, Math.min(1, e * 1.4)); whole(snap, r, 1 - e * e); }
+      render(ctx, tree);
+      if (diving) {
+        const alpha = smooth((t - 0.35) / 0.65);
+        if (alpha > 0) { ctx.globalAlpha = alpha; ctx.drawImage(fresh, 0, 0, W, H); }
+      } else {
+        const alpha = 1 - smooth(t / 0.55);
+        if (alpha > 0) { ctx.globalAlpha = alpha; ctx.drawImage(snap, cx, cy, cw, ch); }
+      }
       ctx.globalAlpha = 1;
       if (t < 1) requestAnimationFrame(frame); else finish();
-    })(t0);
+    };
+    frame(t0);
   });
 }
 
@@ -617,12 +695,19 @@ map.addEventListener('click', e => {
 });
 map.addEventListener('contextmenu', e => { e.preventDefault(); if (!busy) up(); });
 
-let lastWheel = 0;
+// One level per scroll gesture: a trackpad flick sends dozens of wheel events, which must not
+// turn into dozens of dives.
+let wheelLast = 0, wheelSum = 0, wheelUsed = false;
 map.addEventListener('wheel', e => {
   e.preventDefault();
-  if (busy || !view || performance.now() - lastWheel < 420 || Math.abs(e.deltaY) < 4) return;
-  lastWheel = performance.now();
-  if (e.deltaY > 0) { up(); return; }
+  const now = performance.now();
+  if (now - wheelLast > 220) { wheelSum = 0; wheelUsed = false; }
+  wheelLast = now;
+  if (wheelUsed || busy || !view) return;
+  wheelSum += e.deltaY;
+  if (Math.abs(wheelSum) < 30) return;
+  wheelUsed = true;
+  if (wheelSum > 0) { up(); return; }
   let n = hit(...pos(e));                       // scroll up: dive one level towards the cursor
   while (n && n.parent && n.parent !== view.tree) n = n.parent;
   if (n && n !== view.tree && !n.rest && (n.dir || n.kids)) go(n.id, 'in');
@@ -688,14 +773,17 @@ document.querySelector('.tabs').addEventListener('click', e => {
   renderPanel();
 });
 
-async function refreshLists() {
-  const id = view.tree.id;
+async function fetchLists(id) {
   try {
     const [h, t] = await Promise.all([call('top', { id, n: 40 }), call('types', { id })]);
-    if (!view || view.tree.id !== id) return;
-    hogs = h; types = t;
-    for (const it of hogs) known.set(it.id, it);
-  } catch (err) { fail(err); return; }
+    return { id, h, t };
+  } catch (err) { fail(err); return null; }
+}
+
+function showLists(r) {
+  if (!r || !view || view.tree.id !== r.id) return;
+  hogs = r.h; types = r.t;
+  for (const it of hogs) known.set(it.id, it);
   renderPanel();
   renderLegend();
 }
@@ -798,10 +886,14 @@ for (const host of [$('#legend'), $('#panel')]) {
     const cat = c ? Number(c.dataset.cat) : -1;
     const it = r && known.get(Number(r.dataset.row));
     const p = it && view ? visibleId(it.chain) : -1;
-    if (cat !== filterCat || p !== pulse) { filterCat = cat; pulse = p; if (view && !busy) draw(); }
+    if (cat !== filterCat || p !== pulse) {
+      if (cat !== filterCat) baseDirty = true;
+      filterCat = cat; pulse = p;
+      if (view && !busy) draw();
+    }
   });
   host.addEventListener('mouseleave', () => {
-    if (filterCat >= 0 || pulse >= 0) { filterCat = -1; pulse = -1; if (view && !busy) draw(); }
+    if (filterCat >= 0 || pulse >= 0) { baseDirty = baseDirty || filterCat >= 0; filterCat = -1; pulse = -1; if (view && !busy) draw(); }
   });
 }
 
